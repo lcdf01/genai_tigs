@@ -65,11 +65,20 @@ def _cifar10_vae():
 
 
 def _mnist_gan():
-    from tig.models.gan import MnistCDCGANGenerator
-    return MnistCDCGANGenerator(nz=100)
+    from tig.models.gan import mnist_cdcgan
+    return mnist_cdcgan(nz=100)
+
+
+def _rgb32_gan():
+    from tig.models.gan import rgb32_cdcgan
+    return rgb32_cdcgan(nz=100)
 
 
 _MNIST = EXPERIMENTS / "mnist_experiments"
+_SVHN = EXPERIMENTS / "svhn_experiments"
+_CIFAR10 = EXPERIMENTS / "cifar10_experiments"
+_SVHN_CLASSIFIER = WEIGHTS / "svhn/SVHN_vggnet.pth"
+_CIFAR10_CLASSIFIER = WEIGHTS / "cifar10/CIFAR10_cifar10_train.pynet.pth"
 _MNIST_CLASSIFIER = _MNIST / "mnist_classifier/weight/MNIST_conv_classifier.pth"
 _RGB = (3, 32, 32)
 
@@ -85,7 +94,7 @@ CONFIGS = {
         model="vae", dataset="svhn",
         perturbation={"high": 0.0199879989624023, "low": None},
         min_val=-5.26724052429199, max_val=4.72675895690918,
-        weights={"generator": WEIGHTS / "svhn/svhn_convend.pth", "classifier": WEIGHTS / "svhn/SVHN_vggnet.pth"},
+        weights={"generator": WEIGHTS / "svhn/svhn_convend.pth", "classifier": _SVHN_CLASSIFIER},
         networks={"generator": _svhn_vae, "classifier": _vgg},
         image_shape=_RGB,
     ),
@@ -93,10 +102,7 @@ CONFIGS = {
         model="vae", dataset="cifar10",
         perturbation={"high": 0.0160218644142151, "low": None},
         min_val=-4.15868806838989, max_val=3.85224413871765,
-        weights={
-            "generator": WEIGHTS / "cifar10/cifar10_convend.pth",
-            "classifier": WEIGHTS / "cifar10/CIFAR10_cifar10_train.pynet.pth",
-        },
+        weights={"generator": WEIGHTS / "cifar10/cifar10_convend.pth", "classifier": _CIFAR10_CLASSIFIER},
         networks={"generator": _cifar10_vae, "classifier": _vgg},
         image_shape=_RGB,
     ),
@@ -110,12 +116,33 @@ CONFIGS = {
         },
         networks={"generator": _mnist_gan, "classifier": _mnist_classifier},
     ),
+    ("gan", "svhn"): TigConfig(
+        model="gan", dataset="svhn",
+        perturbation={"high": 0.0172531118392944, "low": None},
+        min_val=-4.07097911834717, max_val=4.55557680130005,
+        weights={
+            "generator": _SVHN / "svhn_gan/conditional_gan/cdcgan/weights/netG_epoch_99_ganbsvh.pth",
+            "classifier": _SVHN_CLASSIFIER,
+        },
+        networks={"generator": _rgb32_gan, "classifier": _vgg},
+        image_shape=_RGB,
+    ),
+    ("gan", "cifar10"): TigConfig(
+        model="gan", dataset="cifar10",
+        # The legacy script does not label this value; it matches the MNIST GAN "low" extent.
+        perturbation={"low": 0.00182106418609619, "high": None},
+        min_val=-4.4389796257019, max_val=4.66634130477905,
+        weights={
+            "generator": _CIFAR10 / "cifar10_gan/conditional_gan/cdcgan/weights/netG_epoch_699cdcgancf.pth",
+            "classifier": _CIFAR10_CLASSIFIER,
+        },
+        networks={"generator": _rgb32_gan, "classifier": _vgg},
+        image_shape=_RGB,
+    ),
 }
 
 _LEGACY = {
     ("vae", "imagenet"): "imagenet_experiments/imagenet_vae/tig_vae_imagenet.py",
-    ("gan", "svhn"): "svhn_experiments/svhn_gan/conditional_gan/tig_cdcgan_svhn.py",
-    ("gan", "cifar10"): "cifar10_experiments/cifar10_gan/conditional_gan/tig_cdcgan_cifar10.py",
     ("gan", "imagenet"): "imagenet_experiments/imagenet_gan/conditional_gan/tig_biggan_imagenet.py",
     ("sd", "mnist"): "mnist_experiments/mnist_sd/conditional_sd/tig_sd_mnist.py",
     ("sd", "svhn"): "svhn_experiments/svhn_sd/conditional_sd/tig_sd_svhn.py",

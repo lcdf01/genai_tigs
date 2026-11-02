@@ -22,9 +22,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--pop-size", type=int, default=GAParams.pop_size)
     p.add_argument("--best-left", type=int, default=GAParams.best_left)
     p.add_argument("--data-root", type=Path, default=REPO_ROOT / "data")
-    p.add_argument("--out", type=Path, help="output dir (default: results/<model>_<dataset>_<mutation>_s<seed>)")
+    p.add_argument("--out", type=Path, help="output dir (default: results/<model>_<dataset>_<mutation or pVALUE>_s<seed>)")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     return p
+
+
+def run_label(args) -> str:
+    """Mutation part of the output dir name: the level, or the explicit value when overridden."""
+    return f"p{args.perturbation:g}" if args.perturbation is not None else args.mutation
 
 
 def main(argv=None) -> int:
@@ -58,7 +63,7 @@ def main(argv=None) -> int:
         min_val=config.min_val,
         max_val=config.max_val,
     )
-    out = args.out or REPO_ROOT / "results" / f"{args.model}_{args.dataset}_{args.mutation}_s{args.seed}"
+    out = args.out or REPO_ROOT / "results" / f"{args.model}_{args.dataset}_{run_label(args)}_s{args.seed}"
     if can_encode(generator):
         test_set = load_test_set(args.dataset, args.data_root)
         seed_inputs = seeds.from_test_set(generator, test_set, args.num_images, args.seed, device)

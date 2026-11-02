@@ -20,7 +20,7 @@ python -m tig --model vae --dataset mnist --mutation high --seed 0 --num-images 
 ```
 
 - `--model vae|gan|sd`, `--dataset mnist|svhn|cifar10|imagenet`; combinations not ported yet print the legacy script to use.
-- Ported: VAE on MNIST, SVHN, CIFAR-10; conditional GAN on MNIST.
+- Ported: VAE and conditional GAN on MNIST, SVHN, CIFAR-10.
 - MNIST weights are in the repo. Put the Google Drive checkpoints below under `weights/<dataset>/` (e.g. `weights/svhn/svhn_convend.pth`, `weights/svhn/SVHN_vggnet.pth`); the exact paths are in `tig/config.py`.
 - The same `--seed` gives the same results. Output: `results/<model>_<dataset>_<mutation>_s<seed>/summary.csv` plus one `.npy` per image.
 - Tests: `python -m pytest tests` (unit tests, compatibility with the legacy networks, golden regression tests).

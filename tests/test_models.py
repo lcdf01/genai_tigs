@@ -12,6 +12,7 @@ import torch
 
 from tig.config import EXPERIMENTS, get_config
 from tig.models.classifiers import MnistClassifier, VGGNet
+from tig.models.gan import mnist_cdcgan, rgb32_cdcgan
 from tig.models.vae import MlpVAE, ResConvVAE, StridedConvVAE
 
 
@@ -61,12 +62,33 @@ def test_classifier_matches_legacy(path, cls, new_cls, in_shape):
         torch.testing.assert_close(new(x), legacy(x))
 
 
-def test_mnist_gan_loads_published_weights():
-    from tig.generators import build
+GAN_CASES = [
+    ("mnist_experiments/mnist_gan/conditional_gan/cdcgan/cdcgan_mnist.py", dict(nc=1), mnist_cdcgan),
+    ("svhn_experiments/svhn_gan/conditional_gan/cdcgan/cdcgan_svhn_train.py", dict(nc=3), rgb32_cdcgan),
+    ("cifar10_experiments/cifar10_gan/conditional_gan/cdcgan/cdcgan_cifar10.py", dict(nc=3), rgb32_cdcgan),
+]
 
-    config = get_config("gan", "mnist")
-    generator, _ = build(config, torch.device("cpu"))
-    z = torch.randn(3, generator.latent_dim)
-    images = generator.decode(z, torch.tensor([0, 5, 9]))
-    assert images.shape == (3, 1, 28, 28)
+
+@pytest.mark.parametrize("path,legacy_kw,factory", GAN_CASES, ids=["mnist", "svhn", "cifar10"])
+def test_gan_matches_legacy(path, legacy_kw, factory):
+    pytest.importorskip("matplotlib")  # imported at the top of the legacy training scripts
+    torch.manual_seed(0)
+    legacy = _legacy(path, "Generator")(ngpu=1, nz=100, **legacy_kw).eval()
+    new = factory().eval()
+    new.load_state_dict(legacy.state_dict())
+    z, labels = torch.randn(4, 100), torch.tensor([0, 3, 6, 9])
+    with torch.no_grad():
+        out = new(z, labels)
+        torch.testing.assert_close(out, legacy(z.view(4, 100, 1, 1), labels).view_as(out))
+
+
+@pytest.mark.parametrize("dataset,shape", [("mnist", (1, 28, 28)), ("svhn", (3, 32, 32)), ("cifar10", (3, 32, 32))])
+def test_gan_loads_published_weights(dataset, shape):
+    from tig.generators import _load
+
+    config = get_config("gan", dataset)
+    net = _load(config, "generator", torch.device("cpu"))
+    with torch.no_grad():
+        images = net(torch.randn(3, net.nz), torch.tensor([0, 5, 9]))
+    assert images.shape == (3, *shape)
     assert images.min() >= -1 and images.max() <= 1  # tanh output

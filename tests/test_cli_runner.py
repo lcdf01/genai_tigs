@@ -11,9 +11,9 @@ from tig.runner import run
 
 def test_unported_combination_exits_with_legacy_hint(capsys):
     with pytest.raises(SystemExit) as exc:
-        cli.main(["--model", "gan", "--dataset", "svhn"])
+        cli.main(["--model", "sd", "--dataset", "svhn"])
     assert exc.value.code == 2
-    assert "tig_cdcgan_svhn.py" in capsys.readouterr().err
+    assert "tig_sd_svhn.py" in capsys.readouterr().err
 
 
 def test_undocumented_mutation_level_requires_override(capsys):
@@ -54,3 +54,9 @@ def test_missing_weights_exit_cleanly(capsys):
         cli.main(["--model", "vae", "--dataset", "svhn"])
     assert exc.value.code == 1
     assert "missing generator weights" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("extra,expected", [([], "high"), (["--mutation", "low"], "low"), (["--perturbation", "0.0177"], "p0.0177")])
+def test_output_dir_names_the_perturbation_used(extra, expected):
+    args = cli.build_parser().parse_args(["--model", "gan", "--dataset", "mnist", *extra])
+    assert cli.run_label(args) == expected
