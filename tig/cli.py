@@ -17,7 +17,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--mutation", choices=MUTATIONS, default="high", help="mutation extent (default: high)")
     p.add_argument("--perturbation", type=float, help="override the initial perturbation of --mutation")
     p.add_argument("--seed", type=int, default=0)
-    p.add_argument("--num-images", type=int, default=100, help="test inputs to sample (default: 100)")
+    p.add_argument("--num-images", type=int, default=100, help="seed inputs to sample (default: 100)")
     p.add_argument("--generations", type=int, default=GAParams.generations)
     p.add_argument("--pop-size", type=int, default=GAParams.pop_size)
     p.add_argument("--best-left", type=int, default=GAParams.best_left)
@@ -39,12 +39,17 @@ def main(argv=None) -> int:
         parser.error(f"no documented '{args.mutation}' perturbation for {args.model} x {args.dataset}; pass --perturbation")
 
     # Imported here so --help and argument errors don't pay for loading torchvision.
-    from tig.generators import build
-    from tig.runner import load_test_set, run
+    from tig import seeds
+    from tig.datasets import load_test_set
+    from tig.generators import build, can_encode
+    from tig.runner import run
 
     set_seed(args.seed)
     device = torch.device(args.device)
-    generator, classifier = build(config, device)
+    try:
+        generator, classifier = build(config, device)
+    except FileNotFoundError as e:
+        parser.exit(1, f"tig: error: {e}\n")
     params = GAParams(
         generations=args.generations,
         pop_size=args.pop_size,
@@ -54,7 +59,12 @@ def main(argv=None) -> int:
         max_val=config.max_val,
     )
     out = args.out or REPO_ROOT / "results" / f"{args.model}_{args.dataset}_{args.mutation}_s{args.seed}"
-    rows = run(generator, classifier, load_test_set(args.dataset, args.data_root), params, args.num_images, args.seed, out, device)
+    if can_encode(generator):
+        test_set = load_test_set(args.dataset, args.data_root)
+        seed_inputs = seeds.from_test_set(generator, test_set, args.num_images, args.seed, device)
+    else:
+        seed_inputs = seeds.from_prior(generator, args.num_images, args.seed, device)
+    rows = run(generator, classifier, seed_inputs, params, args.seed, out)
 
     found = sum(r["status"] == "misbehaviour" for r in rows)
     tried = sum(r["status"] != "skipped" for r in rows)

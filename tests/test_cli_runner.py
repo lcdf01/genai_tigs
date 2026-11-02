@@ -5,6 +5,7 @@ import torch
 
 from tig import cli
 from tig.ga import GAParams
+from tig import seeds
 from tig.runner import run
 
 
@@ -34,10 +35,22 @@ def test_runner_writes_summary_and_skips_misclassified(toy, tmp_path):
     test_set = list(zip(images, labels))
 
     params = GAParams(generations=50, pop_size=10, best_left=4, perturbation=0.5)
-    rows = run(gen, clf, test_set, params, num_images=3, seed=0, out_dir=tmp_path, device="cpu")
+    seed_inputs = seeds.from_test_set(gen, test_set, num=3, seed=0, device="cpu")
+    rows = run(gen, clf, seed_inputs, params, seed=0, out_dir=tmp_path)
 
     assert len(rows) == 3
     assert sum(r["status"] == "skipped" for r in rows) == 1
     with open(tmp_path / "summary.csv") as f:
         assert len(list(csv.DictReader(f))) == 3
     assert len(list(tmp_path.glob("*_original.npy"))) == 2
+
+
+def test_missing_weights_exit_cleanly(capsys):
+    from tig.config import get_config
+
+    if get_config("vae", "svhn").weights["generator"].exists():
+        pytest.skip("SVHN weights are present")
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["--model", "vae", "--dataset", "svhn"])
+    assert exc.value.code == 1
+    assert "missing generator weights" in capsys.readouterr().err

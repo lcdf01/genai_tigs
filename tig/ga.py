@@ -50,13 +50,17 @@ def run_ga(generator, classifier, z0, label, params, seed):
     def noise(shape):
         return torch.randn(shape, generator=t_rng).to(device)
 
-    population = [z0 + params.perturbation * noise((1, latent_dim)) for _ in range(params.pop_size)]
+    labels = torch.full((params.pop_size,), label, dtype=torch.long, device=device)
+    population = [
+        torch.clamp(z0 + params.perturbation * noise((1, latent_dim)), params.min_val, params.max_val)
+        for _ in range(params.pop_size)
+    ]
     perturbation = params.perturbation
     prev_best = np.inf
     best = GAResult(image=None, fitness=np.inf, predicted_label=label, generations=0)
 
     for gen in range(params.generations):
-        images = generator.decode(torch.cat(population, dim=0))
+        images = generator.decode(torch.cat(population, dim=0), labels)
         logits = classifier(images).detach().cpu().numpy()
         scores = np.array([calculate_fitness(l, label) for l in logits])
 

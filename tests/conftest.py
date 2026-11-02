@@ -19,7 +19,7 @@ class LinearGenerator:
     def encode(self, images):
         return images.view(images.shape[0], -1) @ torch.linalg.pinv(self.w)
 
-    def decode(self, z):
+    def decode(self, z, labels=None):
         return (z @ self.w).view(-1, 1, 4, 4)  # linear, so encode(decode(z)) == z
 
 
