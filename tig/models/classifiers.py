@@ -1,4 +1,4 @@
-"""Classifiers under test (from experiments/*/model_*.py, which are identical copies)."""
+"""Classifiers under test (from legacy/*/classifier/model.py, which are identical copies)."""
 
 import torch.nn as nn
 

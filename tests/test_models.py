@@ -10,25 +10,25 @@ import importlib.util
 import pytest
 import torch
 
-from tig.config import EXPERIMENTS, get_config
+from tig.config import LEGACY, get_config
 from tig.models.classifiers import MnistClassifier, VGGNet
 from tig.models.gan import mnist_cdcgan, rgb32_cdcgan
 from tig.models.vae import MlpVAE, ResConvVAE, StridedConvVAE
 
 
 def _legacy(rel_path, cls_name):
-    spec = importlib.util.spec_from_file_location(f"legacy_{cls_name}", EXPERIMENTS / rel_path)
+    spec = importlib.util.spec_from_file_location(f"legacy_{cls_name}", LEGACY / rel_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return getattr(module, cls_name)
 
 
 CASES = [
-    ("mnist_experiments/mnist_vae/vae/model.py", "VAE", dict(img_size=784, h_dim=1600, z_dim=400),
+    ("mnist/vae/model.py", "VAE", dict(img_size=784, h_dim=1600, z_dim=400),
      MlpVAE, dict(img_size=784, h_dim=1600, z_dim=400), (1, 784)),
-    ("svhn_experiments/svhn_vae/vae/model.py", "ConvVAE", dict(img_size=(32, 32), c_num=3, h_dim=4000, z_dim=800),
+    ("svhn/vae/model.py", "ConvVAE", dict(img_size=(32, 32), c_num=3, h_dim=4000, z_dim=800),
      ResConvVAE, dict(img_size=(32, 32), c_num=3, h_dim=4000, z_dim=800), (1, 3, 32, 32)),
-    ("cifar10_experiments/cifar10_vae/vae/vae_model.py", "ConvVAE", dict(c_num=3, h_dim=4000, z_dim=1024),
+    ("cifar10/vae/model.py", "ConvVAE", dict(c_num=3, h_dim=4000, z_dim=1024),
      StridedConvVAE, dict(c_num=3, h_dim=4000, z_dim=1024), (1, 3, 32, 32)),
 ]
 
@@ -49,8 +49,8 @@ def test_vae_matches_legacy(path, legacy_cls, legacy_kw, new_cls, new_kw, in_sha
 
 
 @pytest.mark.parametrize("path,cls,new_cls,in_shape", [
-    ("mnist_experiments/mnist_classifier/model_mnist.py", "MnistClassifier", MnistClassifier, (2, 1, 28, 28)),
-    ("svhn_experiments/svhn_classifier/model_svhn.py", "VGGNet", VGGNet, (2, 3, 32, 32)),
+    ("mnist/classifier/model.py", "MnistClassifier", MnistClassifier, (2, 1, 28, 28)),
+    ("svhn/classifier/model.py", "VGGNet", VGGNet, (2, 3, 32, 32)),
 ])
 def test_classifier_matches_legacy(path, cls, new_cls, in_shape):
     torch.manual_seed(0)
@@ -63,9 +63,9 @@ def test_classifier_matches_legacy(path, cls, new_cls, in_shape):
 
 
 GAN_CASES = [
-    ("mnist_experiments/mnist_gan/conditional_gan/cdcgan/cdcgan_mnist.py", dict(nc=1), mnist_cdcgan),
-    ("svhn_experiments/svhn_gan/conditional_gan/cdcgan/cdcgan_svhn_train.py", dict(nc=3), rgb32_cdcgan),
-    ("cifar10_experiments/cifar10_gan/conditional_gan/cdcgan/cdcgan_cifar10.py", dict(nc=3), rgb32_cdcgan),
+    ("mnist/gan/train_cdcgan.py", dict(nc=1), mnist_cdcgan),
+    ("svhn/gan/train_cdcgan.py", dict(nc=3), rgb32_cdcgan),
+    ("cifar10/gan/train_cdcgan.py", dict(nc=3), rgb32_cdcgan),
 ]
 
 

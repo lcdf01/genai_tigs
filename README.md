@@ -6,10 +6,25 @@
  <p align="justify">The objective of this research is to benchmark and combine different GenAI models with test input generators, assessing their effectiveness, efficiency, and quality of the generated test images, in terms of domain validity and label preservation</p>
 
 ## Repository Structure:
-- **experiments** contains subfolders of four separate datasets, each with three folders corresponding to different generative AI model-based test generators. These folders consist of the script used to obtain the results reported in the paper.
-- **documentation** contains a quick installation guide and a detailed description about stable diffusion Models.
-- **generated_images** contains images generated from three different test input generators across four datasets: MNIST, SVHN, CIFAR10, and ImageNet, each with varying mutation levels (high and low).
-- **evaluation_results** contains .csv files with the results for all research questions, including data from the MTurk study. Additionally, the csv_results and scripts folders contain .csv files and .py files, respectively, detailing the mutation extent ranges for each model.
+Every folder follows the same order: **dataset → model → mutation level**. Datasets are `mnist`, `svhn`, `cifar10`, `imagenet_pizza`, `imagenet_teddy` (the two ImageNet classes of the paper); models are `vae`, `gan`, `sd`; levels are `high`, `low`.
+
+```
+tig/                    unified test input generator (python -m tig), see below
+tests/                  pytest suite + golden files
+legacy/<dataset>/       original scripts used for the paper
+    classifier/         model.py, train.py, weights/
+    vae/                tig_vae.py, model.py, train.py, weights/, samples/
+    gan/                tig_gan.py (ImageNet: tig_biggan.py), train_cdcgan.py, weights/, samples/
+    sd/                 tig_sd.py, generate_images.py
+generated_images/<dataset>/<model>_<level>/     generated test inputs (.npy) + summary sheet
+evaluation_results/
+    rq1/<dataset>/      <model>_rq1.py scripts and <model>/ data
+    rq2_rq3/            <dataset>_<model>_<level>.csv
+    human_study/        MTurk results <dataset>.csv, survey/ pages and URL generator
+    mutation_extent/    csv/ ranges and scripts/ that compute them
+    npy_to_png/         converters from .npy to images
+documentation/          Stable Diffusion fine-tuning guide and parameters
+```
 
 ## Unified CLI (`tig/`)
 
@@ -31,7 +46,7 @@ python -m tig --model vae --dataset mnist --mutation high --seed 0 --num-images 
  ### STEP-2: Download Pretrained Classifier Checkpoints:
  To evaluate the performance of the classifier under the test generator, you can obtain the pretrained weight checkpoints from the provided link.
  
-  -Mnist_classifier_ckpt: already uploaded mnist/mnist-classifier/weights under repository structure
+  -Mnist_classifier_ckpt: already in `legacy/mnist/classifier/weights/`
   
   -SVHN_classifier_ckpt:[Download ckpt here](https://drive.google.com/file/d/1vLS_9TT4ncrAfP3LVAOQzw-zdKUgoPBb/view?usp=sharing)
   
@@ -41,7 +56,7 @@ python -m tig --model vae --dataset mnist --mutation high --seed 0 --num-images 
   
   -To make changes to hyperparameters or to train the classifier from scratch, execute the following command:
   
-    python3 train_mnist.py    (for mnist, similar for other datasets)
+    python3 legacy/mnist/classifier/train.py    (similar for other datasets)
 
 
 ### STEP-3: Execute Any One of the Three Generative AI Models Based on Test Input Generators
@@ -50,7 +65,7 @@ python -m tig --model vae --dataset mnist --mutation high --seed 0 --num-images 
  
  We have trained the Variational Autoencoder (VAE) on all four datasets: MNIST, SVHN, CIFAR-10, and ImageNet. You can download the pretrained weights for all four models from the following link.
 
-- Mnist_vae_ckpt:already uploaded mnist/mnist-vae/weights under repository structure
+- Mnist_vae_ckpt:already in `legacy/mnist/vae/weights/`
 - SVHN_vae_ckpt:[Download ckpt here](https://drive.google.com/file/d/13D8DXRQ41pNv29jZDuWKjjUXMaXlpeG1/view?usp=sharing)
 - Cifar10_vae_ckpt:[Download ckpt here](https://drive.google.com/file/d/1dLYUewBnDfOh6qsy8REWFbb57pktKg6k/view?usp=sharing)
 - Imagenet_vae_ckpt:[Download ckpt here](https://drive.google.com/file/d/1iM9Sp7l7zc5o_B5ZukQ4RP8fmkScdFBw/view?usp=sharing)
@@ -60,7 +75,7 @@ python -m tig --model vae --dataset mnist --mutation high --seed 0 --num-images 
  To train the VAE from scratch, run the following command:
 
 ```
-python train_master.py --dataset mnist 
+python legacy/train_vae.py --dataset mnist 
 ```
 
 Replace mnist with svhn, cifar10, or imagenet to train on a different dataset.
@@ -68,10 +83,8 @@ Replace mnist with svhn, cifar10, or imagenet to train on a different dataset.
 After downloading the checkpoints, run the following command to collect misbehavior-inducing inputs, run the command:
 
 ```
-python sinvad_vae_mnist.py --checkpoint_path /path/to/checkpoint
+python -m tig --model vae --dataset mnist
 ```
-
-Replace/path/to/checkpoint with the path to your file.
 ### 2. GAN:
 
 We have trained Conditional GANs for three datasets: MNIST, SVHN, and CIFAR-10. The pretrained weights for these models are available in their respective dataset directories under Repository structure. 
@@ -87,19 +100,13 @@ We have trained Conditional GANs for three datasets: MNIST, SVHN, and CIFAR-10. 
  To run the tig CDCGAN for a specific dataset, use the following command:
 
 ```
-python gan_master.py --dataset mnist
+python -m tig --model gan --dataset mnist --mutation low
 ```
-Replace mnist with svhn or cifar10 to run the GAN for the other datasets.
-
-Similarly, after downloading or training the gan model, run the tig script for cdcgan.
-```
-python gan_master.py --dataset mnist
-```
-Replace mnist with other datasets such as svhn, cifar10, imagenet
+Replace mnist with svhn or cifar10. For ImageNet (BigGAN) use `legacy/imagenet/gan/tig_biggan.py`.
 
 ### 3. Stable Diffusion Setup and Script Execution
 #### How to Fine-tune Stable Diffusion? 
-Fine-tune stable diffusion using the khoya-ss platform on four different datasets. For a detailed description, please [click here](https://github.com/Maryammaryam877/genai_tigs/blob/main/documentation/fine-tune%20stable%20diffusion.md).
+Fine-tune stable diffusion using the khoya-ss platform on four different datasets. For a detailed description, please [click here](documentation/fine_tune_stable_diffusion.md).
 #### Download SD weights
 Download the fine-tuned model weights from [this link](https://drive.google.com/file/d/1FauJR7XbPt_g0W4r-LPIbv7si79JHh4V/view?usp=sharing). 
 
@@ -121,14 +128,14 @@ First, please make sure you have Conda installed. If not, you can download and i
      The requirements setup is already provided; run requirement-sd.txt using pip.
    
    ```
-     pip install requirements-sd.txt
+     pip install -r requirements-sd.txt
    ```
 
  **3. Run SD-based Generator**
      To run the script of the SD generator, run the following command:
 
 ```bash
-python3 tig_sd_mnist.py
+python3 legacy/mnist/sd/tig_sd.py
 ```     
      
   Similar mnist is replaced with other dataset names, svhn, cifar10, and imagenet, according to their dataset name.

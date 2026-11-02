@@ -1,4 +1,4 @@
-"""VAEs whose latent space the GA explores (from experiments/*_vae/vae/*model.py)."""
+"""VAEs whose latent space the GA explores (from legacy/*/vae/model.py)."""
 
 import torch
 import torch.nn as nn

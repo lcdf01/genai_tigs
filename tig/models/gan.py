@@ -1,4 +1,4 @@
-"""Conditional DCGAN generators (from experiments/*_gan/conditional_gan/cdcgan/).
+"""Conditional DCGAN generators (from legacy/*/gan/train_cdcgan.py).
 
 All three datasets share the same conditioning (a 10-d label embedding
 concatenated to ``z``); only the transposed-convolution stack differs.

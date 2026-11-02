@@ -13,7 +13,7 @@ def test_unported_combination_exits_with_legacy_hint(capsys):
     with pytest.raises(SystemExit) as exc:
         cli.main(["--model", "sd", "--dataset", "svhn"])
     assert exc.value.code == 2
-    assert "tig_sd_svhn.py" in capsys.readouterr().err
+    assert "legacy/svhn/sd/tig_sd.py" in capsys.readouterr().err
 
 
 def test_undocumented_mutation_level_requires_override(capsys):
