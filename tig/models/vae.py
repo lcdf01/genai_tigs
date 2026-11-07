@@ -107,3 +107,28 @@ class StridedConvVAE(nn.Module):
         for deconv in (self.dec_conv1, self.dec_conv2, self.dec_conv3):
             h = F.relu(deconv(h))
         return torch.sigmoid(self.dec_conv4(h))
+
+
+class ImageNetVAE(nn.Module):
+    """Convolutional VAE on 128x128 ImageNet crops, in VGG-normalised pixel space."""
+
+    def __init__(self, latent_dim=512):
+        super().__init__()
+        self.z_dim = latent_dim
+        self.shape = 32
+        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, stride=2)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=2)
+        self.fc1 = nn.Linear(64 * (self.shape - 1) ** 2, 2 * latent_dim)
+        self.scale = nn.Parameter(torch.tensor([0.0]))  # training-only, kept so checkpoints load
+        self.fc2 = nn.Linear(latent_dim, (self.shape ** 2) * 32)
+        self.conv3 = nn.ConvTranspose2d(32, 64, kernel_size=2, stride=2)
+        self.conv4 = nn.ConvTranspose2d(64, 32, kernel_size=2, stride=2)
+        self.conv5 = nn.ConvTranspose2d(32, 3, kernel_size=1, stride=1)
+
+    def encode(self, x):
+        x = F.relu(self.conv2(F.relu(self.conv1(x))))
+        return _split(self.fc1(F.relu(x.flatten(1))), self.z_dim)
+
+    def decode(self, z):
+        x = F.relu(self.fc2(z)).view(-1, 32, self.shape, self.shape)
+        return self.conv5(F.relu(self.conv4(F.relu(self.conv3(x)))))

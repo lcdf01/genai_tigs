@@ -34,9 +34,11 @@ The `tig` package runs every generator through one genetic algorithm:
 python -m tig --model vae --dataset mnist --mutation high --seed 0 --num-images 100
 ```
 
-- `--model vae|gan|sd`, `--dataset mnist|svhn|cifar10|imagenet`; combinations not ported yet print the legacy script to use.
-- Ported: VAE and conditional GAN on MNIST, SVHN, CIFAR-10.
-- MNIST weights are in the repo. Put the Google Drive checkpoints below under `weights/<dataset>/` (e.g. `weights/svhn/svhn_convend.pth`, `weights/svhn/SVHN_vggnet.pth`); the exact paths are in `tig/config.py`.
+- `--model vae|gan|sd`, `--dataset mnist|svhn|cifar10|imagenet_pizza|imagenet_teddy`; combinations not ported yet print the legacy script to use.
+- Ported: VAE and GAN on every dataset (conditional DCGAN on MNIST/SVHN/CIFAR-10, BigGAN-deep-256 on ImageNet). Stable Diffusion still runs from `legacy/<dataset>/sd/`.
+- `--mutation low|high`: the initial perturbation is `0.0002` (low) or `0.002` (high) times the latent range `max - min`, the rule behind every value in the legacy scripts.
+- MNIST weights are in the repo. Put the Google Drive checkpoints below under `weights/<dataset>/` (e.g. `weights/svhn/svhn_convend.pth`, `weights/svhn/SVHN_vggnet.pth`, `weights/imagenet/imagenet_vae_model_epoch_41.pth`); the exact paths are in `tig/config.py`.
+- ImageNet: `pip install pytorch-pretrained-biggan scipy`. BigGAN and the VGG19-BN classifier download their weights on first use (~800 MB). The ImageNet VAE starts from real images: put them in `data/imagenet_pizza/<any_folder>/*.jpg` (or `imagenet_teddy`), e.g. the ImageNet validation images of that class.
 - The same `--seed` gives the same results. Output: `results/<model>_<dataset>_<mutation>_s<seed>/summary.csv` plus one `.npy` per image.
 - Tests: `python -m pytest tests` (unit tests, compatibility with the legacy networks, golden regression tests).
 

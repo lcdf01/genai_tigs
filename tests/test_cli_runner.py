@@ -16,10 +16,24 @@ def test_unported_combination_exits_with_legacy_hint(capsys):
     assert "legacy/svhn/sd/tig_sd.py" in capsys.readouterr().err
 
 
-def test_undocumented_mutation_level_requires_override(capsys):
-    with pytest.raises(SystemExit):
-        cli.main(["--model", "vae", "--dataset", "mnist", "--mutation", "low"])
-    assert "--perturbation" in capsys.readouterr().err
+# (model, dataset, level, initial perturbation hard-coded in the legacy script)
+LEGACY_PERTURBATIONS = [
+    ("vae", "mnist", "high", 0.0146425576210022),
+    ("vae", "svhn", "high", 0.0199879989624023),
+    ("vae", "cifar10", "high", 0.0160218644142151),
+    ("vae", "imagenet_pizza", "low", 0.00216982479095459),
+    ("gan", "mnist", "low", 0.00177406988143921),
+    ("gan", "svhn", "high", 0.0172531118392944),
+    ("gan", "cifar10", "low", 0.00182106418609619),
+    ("gan", "imagenet_pizza", "low", 0.000799975180625916),
+]
+
+
+@pytest.mark.parametrize("model,dataset,level,legacy_value", LEGACY_PERTURBATIONS)
+def test_perturbation_rule_reproduces_legacy_values(model, dataset, level, legacy_value):
+    from tig.config import get_config
+
+    assert get_config(model, dataset).perturbation(level) == pytest.approx(legacy_value, rel=1e-9)
 
 
 def test_unknown_dataset_rejected():

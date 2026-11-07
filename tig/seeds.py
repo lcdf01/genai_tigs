@@ -17,10 +17,15 @@ def from_test_set(generator, test_set, num, seed, device):
         yield int(idx), generator.encode(image.unsqueeze(0).to(device)), int(label)
 
 
-def from_prior(generator, num, seed, device, num_classes=10):
-    """Sample ``z ~ N(0, I)`` and a random class (conditional generators)."""
+def from_prior(generator, num, seed, device, classes=None, bound=None):
+    """Sample ``z ~ N(0, I)`` (truncated to ``[-bound, bound]`` if given) and a class
+    from ``classes`` (default: the 10 classes 0-9), for conditional generators."""
+    classes = tuple(range(10)) if classes is None else tuple(classes)
     g = torch.Generator().manual_seed(seed)
     for n in range(num):
-        z = torch.randn(1, generator.latent_dim, generator=g).to(device)
-        label = int(torch.randint(num_classes, (1,), generator=g))
-        yield n, z, label
+        z = torch.randn(1, generator.latent_dim, generator=g)
+        if bound is not None:
+            while (outside := z.abs() > bound).any():  # resample: a true truncated normal
+                z[outside] = torch.randn(int(outside.sum()), generator=g)
+        label = classes[int(torch.randint(len(classes), (1,), generator=g))]
+        yield n, z.to(device), label

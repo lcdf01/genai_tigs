@@ -42,3 +42,10 @@ def rgb32_cdcgan(nz=100):
         ],
         nz=nz,
     )
+
+
+def biggan_deep_256():
+    """Pretrained BigGAN-deep 256x256 (pip install pytorch-pretrained-biggan), downloaded on first use."""
+    from pytorch_pretrained_biggan import BigGAN
+
+    return BigGAN.from_pretrained("biggan-deep-256")

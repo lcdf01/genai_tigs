@@ -43,7 +43,7 @@ def test_matches_golden(model, dataset, mutation):
     generator, classifier = build(config, torch.device("cpu"))
     z0, label = _start(generator, classifier)
     params = GAParams(
-        generations=30, perturbation=config.perturbation[mutation], min_val=config.min_val, max_val=config.max_val
+        generations=30, perturbation=config.perturbation(mutation), min_val=config.min_val, max_val=config.max_val
     )
     result = run_ga(generator, classifier, z0, label, params, seed=0)
 

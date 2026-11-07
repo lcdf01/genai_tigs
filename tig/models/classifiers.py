@@ -71,3 +71,10 @@ class VGGNet(nn.Module):
         for layer in (self.layer1, self.layer2, self.layer3, self.layer4, self.layer5):
             x = layer(x)
         return self.vggc(x)
+
+
+def vgg19_bn_imagenet(pretrained=True):
+    """torchvision VGG19-BN (same weights as torch.hub pytorch/vision vgg19_bn), downloaded on first use."""
+    from torchvision.models import VGG19_BN_Weights, vgg19_bn
+
+    return vgg19_bn(weights=VGG19_BN_Weights.IMAGENET1K_V1 if pretrained else None)

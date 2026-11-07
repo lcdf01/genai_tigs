@@ -39,9 +39,7 @@ def main(argv=None) -> int:
     if not config.ported:
         parser.error(f"{args.model} x {args.dataset} is not ported yet; legacy script: {config.legacy_script}")
 
-    perturbation = args.perturbation if args.perturbation is not None else config.perturbation.get(args.mutation)
-    if perturbation is None:
-        parser.error(f"no documented '{args.mutation}' perturbation for {args.model} x {args.dataset}; pass --perturbation")
+    perturbation = args.perturbation if args.perturbation is not None else config.perturbation(args.mutation)
 
     # Imported here so --help and argument errors don't pay for loading torchvision.
     from tig import seeds
@@ -55,6 +53,8 @@ def main(argv=None) -> int:
         generator, classifier = build(config, device)
     except FileNotFoundError as e:
         parser.exit(1, f"tig: error: {e}\n")
+    except ImportError as e:
+        parser.exit(1, f"tig: error: {e}; ImageNet needs: pip install pytorch-pretrained-biggan scipy\n")
     params = GAParams(
         generations=args.generations,
         pop_size=args.pop_size,
@@ -65,10 +65,15 @@ def main(argv=None) -> int:
     )
     out = args.out or REPO_ROOT / "results" / f"{args.model}_{args.dataset}_{run_label(args)}_s{args.seed}"
     if can_encode(generator):
-        test_set = load_test_set(args.dataset, args.data_root)
+        try:
+            test_set = load_test_set(args.dataset, args.data_root)
+        except FileNotFoundError as e:
+            parser.exit(1, f"tig: error: {e}\n")
         seed_inputs = seeds.from_test_set(generator, test_set, args.num_images, args.seed, device)
     else:
-        seed_inputs = seeds.from_prior(generator, args.num_images, args.seed, device)
+        seed_inputs = seeds.from_prior(
+            generator, args.num_images, args.seed, device, classes=config.classes, bound=config.prior_bound
+        )
     rows = run(generator, classifier, seed_inputs, params, args.seed, out)
 
     found = sum(r["status"] == "misbehaviour" for r in rows)
