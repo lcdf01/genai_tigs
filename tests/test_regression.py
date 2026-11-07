@@ -19,7 +19,11 @@ from tig.generators import build, can_encode
 
 GOLDEN_DIR = Path(__file__).parent / "golden"
 # (model, dataset, mutation level with a documented perturbation)
-CASES = [("vae", "mnist", "high"), ("gan", "mnist", "low")]
+CASES = [
+    ("vae", "mnist", "high"), ("gan", "mnist", "low"),
+    # These need the Google Drive weights in weights/ and are skipped without them.
+    ("vae", "svhn", "high"), ("gan", "svhn", "high"), ("vae", "cifar10", "high"), ("gan", "cifar10", "low"),
+]
 
 
 def _start(generator, classifier):
