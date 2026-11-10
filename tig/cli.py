@@ -37,7 +37,8 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     config = get_config(args.model, args.dataset)
     if not config.ported:
-        parser.error(f"{args.model} x {args.dataset} is not ported yet; legacy script: {config.legacy_script}")
+        script = config.legacy_script.relative_to(REPO_ROOT).as_posix()
+        parser.error(f"{args.model} x {args.dataset} is not ported yet; legacy script: {script}")
 
     perturbation = args.perturbation if args.perturbation is not None else config.perturbation(args.mutation)
 
