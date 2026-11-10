@@ -64,5 +64,7 @@ def test_matches_golden(model, dataset, mutation):
     assert label == golden["label"]
     assert result.predicted_label == golden["predicted"]
     assert result.generations == golden["generations"]
-    assert result.fitness == pytest.approx(float(golden["fitness"]), abs=1e-4)
+    # The classifier amplifies float noise between platforms and torch builds: on Windows with
+    # torch 2.14 the VAE SVHN image moves by 1.4e-5 and its fitness by 1.9e-4.
+    assert result.fitness == pytest.approx(float(golden["fitness"]), abs=1e-3)
     np.testing.assert_allclose(result.image.numpy(), golden["image"], atol=1e-4)
