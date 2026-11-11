@@ -42,7 +42,7 @@ python -m tig --model vae --dataset mnist --mutation high --seed 0 --num-images 
 - ImageNet: BigGAN and the VGG19-BN classifier download their weights on first use (~800 MB). The ImageNet VAE starts from real images: put them in `data/imagenet_pizza/<any_folder>/*.jpg` (or `imagenet_teddy`), e.g. the ImageNet validation images of that class.
 - `--batch-size N` decodes and classifies the population N images at a time to fit small GPUs; it doesn't change the search. BigGAN uses 5 by default (25 images at once need about 4.8 GB).
 - The same `--seed` gives the same results. Output: `results/<model>_<dataset>_<mutation>_s<seed>/summary.csv` plus one `.npy` per image.
-- Tests: `python -m pytest tests` (unit tests, compatibility with the legacy networks, golden regression tests).
+- Tests: `python -m pytest tests` (unit tests, compatibility with the legacy networks, golden regression tests). GitHub Actions runs them on every push and pull request (`.github/workflows/tests.yml`, CPU only, so the tests that need the Drive weights are skipped).
 
  ## Getting Started to RUN GenAI-Tigs:
  ### STEP-1: Configure the environment:
