@@ -7,7 +7,7 @@ import torch
 
 from tig.config import DATASETS, MODELS, MUTATIONS, REPO_ROOT, get_config
 from tig.ga import GAParams
-from tig.seed import set_seed
+from tig.seed import make_deterministic, set_seed
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -50,6 +50,7 @@ def main(argv=None) -> int:
     from tig.runner import run
 
     set_seed(args.seed)
+    make_deterministic()
     device = torch.device(args.device)
     try:
         generator, classifier = build(config, device)
