@@ -34,6 +34,14 @@ class GAResult:
         return self.fitness < 0
 
 
+def crossover(mom, dad, np_rng, unit=1):
+    """One-point crossover of two ``[1, latent_dim]`` latents. The cut falls on a multiple of
+    ``unit``: 1 for flat latents, one channel (64x64 values) for Stable Diffusion, whose legacy
+    scripts cut its 4x64x64 latent between channels."""
+    cut = unit * int(np_rng.integers(mom.shape[1] // unit))
+    return torch.cat([mom[:, :cut], dad[:, cut:]], dim=1)
+
+
 @torch.no_grad()
 def run_ga(generator, classifier, z0, label, params, seed):
     """Search around latent ``z0`` (shape ``[1, latent_dim]``) for an input
@@ -66,6 +74,7 @@ def run_ga(generator, classifier, z0, label, params, seed):
     best = GAResult(image=None, fitness=np.inf, predicted_label=label, generations=0)
 
     step = params.batch_size or params.pop_size
+    unit = getattr(generator, "crossover_unit", 1)
 
     def evaluate(zs):
         """Decode and classify the population ``step`` members at a time."""
@@ -98,8 +107,7 @@ def run_ga(generator, classifier, z0, label, params, seed):
         children = []
         for _ in range(params.pop_size - params.best_left):
             mom, dad = np_rng.choice(params.best_left, size=2, replace=False)
-            cut = int(np_rng.integers(latent_dim))
-            child = torch.cat([parents[mom][:, :cut], parents[dad][:, cut:]], dim=1)
+            child = crossover(parents[mom], parents[dad], np_rng, unit)
             changed = (child != z0).float()  # mutate only genes that already moved
             children.append(child + perturbation * noise(child.shape) * changed)
         population = [torch.clamp(z, params.min_val, params.max_val) for z in parents + children]

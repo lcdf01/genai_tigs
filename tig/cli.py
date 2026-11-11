@@ -22,6 +22,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--pop-size", type=int, default=GAParams.pop_size)
     p.add_argument("--best-left", type=int, default=GAParams.best_left)
     p.add_argument("--batch-size", type=int, help="population members decoded at once; lower it if the GPU runs out of memory")
+    p.add_argument("--sd-precision", choices=("fp16", "fp32"), default="fp16",
+                   help="Stable Diffusion weights (default fp16 as in the paper; fp32 for GPUs that return NaN in fp16, e.g. GTX 16xx)")
     p.add_argument("--data-root", type=Path, default=REPO_ROOT / "data")
     p.add_argument("--out", type=Path, help="output dir (default: results/<model>_<dataset>_<mutation or pVALUE>_s<seed>)")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
@@ -53,7 +55,7 @@ def main(argv=None) -> int:
     make_deterministic()
     device = torch.device(args.device)
     try:
-        generator, classifier = build(config, device)
+        generator, classifier = build(config, device, sd_precision=args.sd_precision)
     except FileNotFoundError as e:
         parser.exit(1, f"tig: error: {e}\n")
     except ImportError as e:

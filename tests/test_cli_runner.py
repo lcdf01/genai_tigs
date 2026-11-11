@@ -9,7 +9,19 @@ from tig import seeds
 from tig.runner import run
 
 
-def test_unported_combination_exits_with_legacy_hint(capsys):
+def test_every_combination_is_ported():
+    from tig.config import CONFIGS, DATASETS, MODELS
+
+    assert {(m, d) for m in MODELS for d in DATASETS} == set(CONFIGS)
+    assert all(c.ported for c in CONFIGS.values())
+
+
+def test_unported_combination_exits_with_legacy_hint(capsys, monkeypatch):
+    # Every combination is ported now; keep the hint working for a future one that isn't.
+    from tig.config import CONFIGS, LEGACY, TigConfig
+
+    unported = TigConfig(model="sd", dataset="svhn", legacy_script=LEGACY / "svhn/sd/tig_sd.py")
+    monkeypatch.setitem(CONFIGS, ("sd", "svhn"), unported)
     with pytest.raises(SystemExit) as exc:
         cli.main(["--model", "sd", "--dataset", "svhn"])
     assert exc.value.code == 2
@@ -26,6 +38,10 @@ LEGACY_PERTURBATIONS = [
     ("gan", "svhn", "high", 0.0172531118392944),
     ("gan", "cifar10", "low", 0.00182106418609619),
     ("gan", "imagenet_pizza", "low", 0.000799975180625916),
+    ("sd", "mnist", "low", 0.00216688718795776),
+    ("sd", "svhn", "low", 0.00217826347351074),
+    ("sd", "cifar10", "low", 0.00218342552185059),
+    ("sd", "imagenet_pizza", "high", 0.0217526149749756),
 ]
 
 

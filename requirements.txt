@@ -1,7 +1,7 @@
 # Dependencies of the unified generator (tig/) and its tests.
 # For CUDA, install torch and torchvision from https://pytorch.org first
 # (e.g. --index-url https://download.pytorch.org/whl/cu126), then this file.
-# Stable Diffusion still uses the legacy scripts and requirements-sd.txt.
+# requirements-sd.txt is the old pinned environment of the legacy scripts; tig doesn't need it.
 # Tested with torch 2.14.1, numpy 2.4, Python 3.11 on Windows.
 torch>=2.0
 torchvision>=0.15
@@ -11,6 +11,14 @@ pytest>=7
 # ImageNet: BigGAN-deep-256 and its truncated-noise prior
 pytorch-pretrained-biggan>=0.1.1
 scipy>=1.10
+
+# Stable Diffusion 1.5 + LoRA (tested with diffusers 0.42, transformers 5.22, peft 0.21)
+diffusers>=0.30
+transformers>=4.40
+accelerate>=0.21
+peft>=0.10
+safetensors>=0.4
+opencv-python-headless>=4.8
 
 # Only imported by the legacy training scripts that the equivalence tests load
 matplotlib>=3.7

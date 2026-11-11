@@ -35,13 +35,13 @@ pip install -r requirements.txt   # for CUDA, install torch/torchvision from pyt
 python -m tig --model vae --dataset mnist --mutation high --seed 0 --num-images 100
 ```
 
-- `--model vae|gan|sd`, `--dataset mnist|svhn|cifar10|imagenet_pizza|imagenet_teddy`; combinations not ported yet print the legacy script to use.
-- Ported: VAE and GAN on every dataset (conditional DCGAN on MNIST/SVHN/CIFAR-10, BigGAN-deep-256 on ImageNet). Stable Diffusion still runs from `legacy/<dataset>/sd/`.
+- `--model vae|gan|sd`, `--dataset mnist|svhn|cifar10|imagenet_pizza|imagenet_teddy`: all 15 combinations are ported (conditional DCGAN on MNIST/SVHN/CIFAR-10, BigGAN-deep-256 on ImageNet, Stable Diffusion 1.5 with the paper's LoRA on every dataset).
+- Stable Diffusion: unzip the SD weights from the Drive link below into `weights/sd/` (one `.safetensors` LoRA per dataset, pizza and teddy separate). The base model `stable-diffusion-v1-5/stable-diffusion-v1-5` (the official mirror of the removed `runwayml/stable-diffusion-v1-5`, ~2 GB fp16) downloads from Hugging Face on first use. It needs a CUDA GPU and runs in fp16 as in the paper; GTX 16xx cards (e.g. GTX 1650) return NaN images in fp16, so the run stops and asks for `--sd-precision fp32`, which moves the model to the GPU piece by piece and takes about 4 minutes per image on a GTX 1650. Each image is 15-25 DDIM steps, so a full 250-generation run takes hours per seed; `--generations` and `--pop-size` make short runs. Unlike the legacy SVHN/CIFAR-10/ImageNet scripts it doesn't use T-GATE (which skips cross-attention after step 10 to save time), so images can differ slightly.
 - `--mutation low|high`: the initial perturbation is `0.0002` (low) or `0.002` (high) times the latent range `max - min`, the rule behind every value in the legacy scripts.
 - MNIST weights are in the repo. Put the Google Drive checkpoints below under `weights/<dataset>/` (e.g. `weights/svhn/svhn_convend.pth`, `weights/svhn/SVHN_vggnet.pth`, `weights/imagenet/imagenet_vae_model_epoch_41.pth`); the exact paths are in `tig/config.py`.
 - ImageNet: BigGAN and the VGG19-BN classifier download their weights on first use (~800 MB). The ImageNet VAE starts from real images: put them in `data/imagenet_pizza/<any_folder>/*.jpg` (or `imagenet_teddy`), e.g. the ImageNet validation images of that class.
 - `--batch-size N` decodes and classifies the population N images at a time to fit small GPUs; it doesn't change the search. BigGAN uses 5 by default (25 images at once need about 4.8 GB).
-- The same `--seed` gives the same results. Output: `results/<model>_<dataset>_<mutation>_s<seed>/summary.csv` plus one `.npy` per image.
+- The same `--seed` gives the same results, on the GPU too: the CLI turns on PyTorch's deterministic mode (without it cuDNN picks different convolution algorithms on every run). Output: `results/<model>_<dataset>_<mutation>_s<seed>/summary.csv` plus one `.npy` per image.
 - Tests: `python -m pytest tests` (unit tests, compatibility with the legacy networks, golden regression tests). GitHub Actions runs them on every push and pull request (`.github/workflows/tests.yml`, CPU only, so the tests that need the Drive weights are skipped).
 
  ## Getting Started to RUN GenAI-Tigs:
@@ -112,7 +112,13 @@ Replace mnist with svhn or cifar10. For ImageNet (BigGAN) use `legacy/imagenet/g
 #### How to Fine-tune Stable Diffusion? 
 Fine-tune stable diffusion using the khoya-ss platform on four different datasets. For a detailed description, please [click here](documentation/fine_tune_stable_diffusion.md).
 #### Download SD weights
-Download the fine-tuned model weights from [this link](https://drive.google.com/file/d/1FauJR7XbPt_g0W4r-LPIbv7si79JHh4V/view?usp=sharing). 
+Download the fine-tuned model weights from [this link](https://drive.google.com/file/d/1FauJR7XbPt_g0W4r-LPIbv7si79JHh4V/view?usp=sharing) and unzip the five `.safetensors` files into `weights/sd/`. Then run, for example:
+
+```bash
+python -m tig --model sd --dataset mnist --mutation low --seed 0
+```
+
+The legacy instructions below are kept for reference; note that `legacy/svhn/sd/tig_sd.py` doesn't compile as published (a comment without `#` on its `init_perturbation` line).
 
 #### configuration to excute Sd_tig
 

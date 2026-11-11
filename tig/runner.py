@@ -16,8 +16,10 @@ def run(generator, classifier, seeds, params: GAParams, seed: int, out_dir: Path
     rows = []
 
     for n, (key, z0, label) in enumerate(seeds):
+        # Stable Diffusion renders the seed image with its own (stronger) guidance, as the legacy did.
+        decode_seed = getattr(generator, "decode_seed", generator.decode)
         with torch.no_grad():
-            original = generator.decode(z0, torch.tensor([label], device=z0.device))
+            original = decode_seed(z0, torch.tensor([label], device=z0.device))
             original_pred = int(classifier(original).argmax(dim=1).item())
         row = {"seed_id": key, "label": label, "original_pred": original_pred}
 

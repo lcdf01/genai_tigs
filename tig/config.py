@@ -28,6 +28,15 @@ IMAGENET_CLASSES = {"imagenet_pizza": PIZZA, "imagenet_teddy": TEDDY_BEAR}
 
 
 @dataclass(frozen=True)
+class SDSettings:
+    """Stable Diffusion specifics, copied from legacy/<dataset>/sd/tig_sd.py."""
+
+    prompts: Dict[int, str]  # class index -> prompt with the LoRA trigger word
+    steps: int  # DDIM inference steps
+    preprocess: str  # key of tig.generators.SD_PREPROCESS
+
+
+@dataclass(frozen=True)
 class TigConfig:
     model: str
     dataset: str
@@ -44,6 +53,7 @@ class TigConfig:
     prior_bound: Optional[float] = None
     # Default GA batch size (None = whole population); keeps large models within small GPUs.
     batch_size: Optional[int] = None
+    sd: Optional[SDSettings] = None
     legacy_script: Optional[Path] = None
 
     @property
@@ -175,15 +185,66 @@ for _dataset, _cls in IMAGENET_CLASSES.items():
         batch_size=5,  # 25 BigGAN-deep-256 images at once need about 4.8 GB of GPU memory
     )
 
-_LEGACY = {
-    ("sd", "mnist"): "mnist/sd/tig_sd.py",
-    ("sd", "svhn"): "svhn/sd/tig_sd.py",
-    ("sd", "cifar10"): "cifar10/sd/tig_sd.py",
-    ("sd", "imagenet_pizza"): "imagenet/sd/tig_sd.py",
-    ("sd", "imagenet_teddy"): "imagenet/sd/tig_sd.py",
+# Stable Diffusion 1.5 + one LoRA per dataset (Google Drive, see README) in weights/sd/.
+# Latent bounds, prompts and steps come from legacy/<dataset>/sd/tig_sd.py.
+_SD = WEIGHTS / "sd"
+# Verbatim, trailing spaces included (a test compares them with the legacy scripts).
+_SD_MNIST_PROMPTS = [
+    "A photo of Z0ero Number0", "A photo of one1 Number1", "A photo of two2 Number2 ", "A photo of three3 Number3",
+    "A photo of Four4 Number4", "A photo of Five5 Number5", "A photo of Six6 Number6", "A photo of Seven7 Number7 ",
+    "A photo of Eight8 Number8", "A photo of Nine9 Number9",
+]
+_SD_SVHN_PROMPTS = [f"A photo of HouseNo{i} Hnumber{i}" + (" " if i in (2, 7) else "") for i in range(10)]
+_SD_CIFAR10_PROMPTS = [
+    "A photo of A1plane0 cifar10_0", "A photo of car1 cifar10_1", "A photo of bird2 cifar10_2",
+    "A photo of cat3 cifar10_3", "A photo of deer4 cifar10_4", "A photo of dog5 cifar10_5",
+    "A photo of frog6 cifar10_6", "A photo of horse7 cifar10_7", "A photo of ship8 cifar10_8",
+    "A photo of truck9 cifar10_9",
+]
+CONFIGS[("sd", "mnist")] = TigConfig(
+    model="sd", dataset="mnist",
+    min_val=-5.41362476348877, max_val=5.42081117630005,
+    weights={"lora": _SD / "Mnist_Lora_sdv1.5-000005.safetensors", "classifier": _MNIST_CLASSIFIER},
+    networks={"classifier": _mnist_classifier},
+    batch_size=1,
+    sd=SDSettings(dict(enumerate(_SD_MNIST_PROMPTS)), steps=15, preprocess="mnist"),
+)
+CONFIGS[("sd", "svhn")] = TigConfig(
+    model="sd", dataset="svhn",
+    min_val=-5.62070274353027, max_val=5.27061462402344,
+    weights={"lora": _SD / "svhn_finetune_lorav1.5-000005.safetensors", "classifier": _SVHN_CLASSIFIER},
+    networks={"classifier": _vgg},
+    image_shape=_RGB,
+    batch_size=1,
+    sd=SDSettings(dict(enumerate(_SD_SVHN_PROMPTS)), steps=25, preprocess="rgb32"),
+)
+CONFIGS[("sd", "cifar10")] = TigConfig(
+    model="sd", dataset="cifar10",
+    min_val=-5.53951740264893, max_val=5.377610206604,
+    weights={"lora": _SD / "cifar10_finetune_lorav1.5-000005.safetensors", "classifier": _CIFAR10_CLASSIFIER},
+    networks={"classifier": _vgg},
+    image_shape=_RGB,
+    batch_size=1,
+    sd=SDSettings(dict(enumerate(_SD_CIFAR10_PROMPTS)), steps=25, preprocess="rgb32"),
+)
+# The published weights have one LoRA per ImageNet class. The legacy script has only the pizza
+# prompt; the teddy one is the training folder stored in its LoRA ("25_1toy_bear teddy_bear").
+_SD_IMAGENET = {
+    PIZZA: ("pizza_imgnet-000005.safetensors", "A photo of 1pizza pizza_slice"),
+    TEDDY_BEAR: ("teddy_bear_imagenet-000005.safetensors", "A photo of 1toy_bear teddy_bear"),
 }
-for _key, _path in _LEGACY.items():
-    CONFIGS[_key] = TigConfig(model=_key[0], dataset=_key[1], legacy_script=LEGACY / _path)
+for _dataset, _cls in IMAGENET_CLASSES.items():
+    _lora, _prompt = _SD_IMAGENET[_cls]
+    CONFIGS[("sd", _dataset)] = TigConfig(
+        model="sd", dataset=_dataset,
+        min_val=-5.3243408203125, max_val=5.55196666717529,
+        weights={"lora": _SD / _lora},
+        networks={"classifier": _vgg19_bn_imagenet},
+        image_shape=(3, 224, 224),
+        classes=(_cls,),
+        batch_size=1,
+        sd=SDSettings({_cls: _prompt}, steps=25, preprocess="imagenet"),
+    )
 
 
 def get_config(model: str, dataset: str) -> TigConfig:
