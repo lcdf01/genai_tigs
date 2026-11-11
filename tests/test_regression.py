@@ -1,6 +1,13 @@
 """Regression tests on the real checkpoints shipped in the repo.
 
 Each golden file pins today's output; a refactor that changes it fails here.
+
+The runs use float64 on a single CPU thread. With a small mutation the population members
+are nearly identical, so their fitness values differ by about float32 rounding: any change in
+summation order (thread count, CPU kernels, platform) reorders them and the GA takes another
+path. In float32 the GAN MNIST run ended 0.17 apart on Linux and Windows, and VAE MNIST
+changed with the thread count; in float64 on one thread the results match.
+
 After an intentional behaviour change, regenerate them with:
 
     TIG_UPDATE_GOLDEN=1 python -m pytest tests/test_regression.py
@@ -38,13 +45,26 @@ def _start(generator, classifier):
     raise AssertionError("no class is recognised from this latent")
 
 
+@pytest.fixture
+def reproducible_cpu():
+    """float64 and one thread for the duration of a test, restored afterwards."""
+    dtype, threads = torch.get_default_dtype(), torch.get_num_threads()
+    torch.set_default_dtype(torch.float64)
+    torch.set_num_threads(1)
+    yield
+    torch.set_default_dtype(dtype)
+    torch.set_num_threads(threads)
+
+
 @pytest.mark.parametrize("model,dataset,mutation", CASES, ids=[f"{m}-{d}" for m, d, _ in CASES])
-def test_matches_golden(model, dataset, mutation):
+def test_matches_golden(model, dataset, mutation, reproducible_cpu):
     config = get_config(model, dataset)
     if not all(p.exists() for p in config.weights.values()):
         pytest.skip("weights not available")
 
     generator, classifier = build(config, torch.device("cpu"))
+    (generator.vae if can_encode(generator) else generator.generator).double()
+    classifier.double()
     z0, label = _start(generator, classifier)
     params = GAParams(
         generations=30, perturbation=config.perturbation(mutation), min_val=config.min_val, max_val=config.max_val
@@ -64,7 +84,5 @@ def test_matches_golden(model, dataset, mutation):
     assert label == golden["label"]
     assert result.predicted_label == golden["predicted"]
     assert result.generations == golden["generations"]
-    # The classifier amplifies float noise between platforms and torch builds: on Windows with
-    # torch 2.14 the VAE SVHN image moves by 1.4e-5 and its fitness by 1.9e-4.
-    assert result.fitness == pytest.approx(float(golden["fitness"]), abs=1e-3)
-    np.testing.assert_allclose(result.image.numpy(), golden["image"], atol=1e-4)
+    assert result.fitness == pytest.approx(float(golden["fitness"]), abs=1e-6)
+    np.testing.assert_allclose(result.image.numpy(), golden["image"], atol=1e-8)
