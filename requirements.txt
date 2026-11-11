@@ -1,11 +1,15 @@
-# Dependencies of the unified generator (tig/) and its tests.
-# For CUDA, install torch and torchvision from https://pytorch.org first
+# Dependencies of the unified generator (tig/) and its tests. Python 3.9 or newer.
+# For an NVIDIA GPU, install torch and torchvision from https://pytorch.org first
 # (e.g. --index-url https://download.pytorch.org/whl/cu126), then this file.
-# requirements-sd.txt is the old pinned environment of the legacy scripts; tig doesn't need it.
-# Tested with torch 2.14.1, numpy 2.4, Python 3.11 on Windows.
+# Tested on:
+#   - Windows, NVIDIA GTX 1650 (CUDA 12.6): Python 3.11, torch 2.14.1, numpy 2.4
+#   - macOS (CPU): Python 3.9, torch 2.8, numpy 2.0
+#   - GitHub Actions, Ubuntu (CPU): Python 3.11, torch 2.14.1 (pinned in .github/workflows/tests.yml)
+# requirements-sd.txt is the old environment of the legacy scripts; tig doesn't need it.
 torch>=2.0
 torchvision>=0.15
 numpy>=1.24
+pillow>=9.0
 pytest>=7
 
 # ImageNet: BigGAN-deep-256 and its truncated-noise prior
