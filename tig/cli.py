@@ -21,6 +21,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--generations", type=int, default=GAParams.generations)
     p.add_argument("--pop-size", type=int, default=GAParams.pop_size)
     p.add_argument("--best-left", type=int, default=GAParams.best_left)
+    p.add_argument("--batch-size", type=int, help="population members decoded at once; lower it if the GPU runs out of memory")
     p.add_argument("--data-root", type=Path, default=REPO_ROOT / "data")
     p.add_argument("--out", type=Path, help="output dir (default: results/<model>_<dataset>_<mutation or pVALUE>_s<seed>)")
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
@@ -60,6 +61,7 @@ def main(argv=None) -> int:
         generations=args.generations,
         pop_size=args.pop_size,
         best_left=args.best_left,
+        batch_size=args.batch_size if args.batch_size is not None else config.batch_size,
         perturbation=perturbation,
         min_val=config.min_val,
         max_val=config.max_val,

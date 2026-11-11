@@ -42,6 +42,8 @@ class TigConfig:
     classes: Optional[Tuple[int, ...]] = None
     # Prior seeds are drawn from N(0, I) truncated to [-bound, bound] (None = untruncated).
     prior_bound: Optional[float] = None
+    # Default GA batch size (None = whole population); keeps large models within small GPUs.
+    batch_size: Optional[int] = None
     legacy_script: Optional[Path] = None
 
     @property
@@ -170,6 +172,7 @@ for _dataset, _cls in IMAGENET_CLASSES.items():
         image_shape=(3, 224, 224),
         classes=(_cls,),
         prior_bound=2.0,  # truncated_noise_sample(truncation=1) in the legacy script
+        batch_size=5,  # 25 BigGAN-deep-256 images at once need about 4.8 GB of GPU memory
     )
 
 _LEGACY = {

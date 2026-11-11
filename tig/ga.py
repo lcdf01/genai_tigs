@@ -1,6 +1,7 @@
 """Latent-space genetic algorithm shared by every generator (SINVAD-style)."""
 
 from dataclasses import dataclass
+from typing import Optional
 
 import numpy as np
 import torch
@@ -16,6 +17,9 @@ class GAParams:
     perturbation: float = 0.0146425576210022
     min_val: float = -np.inf
     max_val: float = np.inf
+    # Population members decoded and classified at once (None = the whole population).
+    # Smaller batches only lower peak GPU memory; the search itself is unchanged.
+    batch_size: Optional[int] = None
 
 
 @dataclass
@@ -41,6 +45,8 @@ def run_ga(generator, classifier, z0, label, params, seed):
         raise ValueError("best_left must be in [2, pop_size)")
     if params.generations < 1:
         raise ValueError("generations must be >= 1")
+    if params.batch_size is not None and params.batch_size < 1:
+        raise ValueError("batch_size must be >= 1")
 
     device = z0.device
     t_rng = torch.Generator(device="cpu").manual_seed(seed)
@@ -59,9 +65,19 @@ def run_ga(generator, classifier, z0, label, params, seed):
     prev_best = np.inf
     best = GAResult(image=None, fitness=np.inf, predicted_label=label, generations=0)
 
+    step = params.batch_size or params.pop_size
+
+    def evaluate(zs):
+        """Decode and classify the population ``step`` members at a time."""
+        images, logits = [], []
+        for i in range(0, len(zs), step):
+            batch = generator.decode(torch.cat(zs[i:i + step], dim=0), labels[i:i + step])
+            logits.append(classifier(batch).detach().cpu().numpy())
+            images.append(batch)
+        return torch.cat(images, dim=0), np.concatenate(logits, axis=0)
+
     for gen in range(params.generations):
-        images = generator.decode(torch.cat(population, dim=0), labels)
-        logits = classifier(images).detach().cpu().numpy()
+        images, logits = evaluate(population)
         scores = np.array([calculate_fitness(l, label) for l in logits])
 
         idx = int(np.argmin(scores))

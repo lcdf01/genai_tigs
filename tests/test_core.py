@@ -43,6 +43,17 @@ def test_ga_is_deterministic_for_same_seed(toy):
     assert (a.fitness, a.generations) == (b.fitness, b.generations)
 
 
+def test_ga_batch_size_does_not_change_the_search(toy):
+    gen, clf = toy
+    z0, label = _start(gen, clf)
+    base = dict(generations=15, pop_size=10, best_left=4, perturbation=0.05)
+    whole = run_ga(gen, clf, z0, label, GAParams(**base), seed=3)
+    batched = run_ga(gen, clf, z0, label, GAParams(**base, batch_size=3), seed=3)  # 3 + 3 + 3 + 1
+    assert (batched.generations, batched.predicted_label) == (whole.generations, whole.predicted_label)
+    assert batched.fitness == pytest.approx(whole.fitness, abs=1e-5)
+    torch.testing.assert_close(batched.image, whole.image)
+
+
 def test_ga_finds_misbehaviour_on_easy_problem(toy):
     gen, clf = toy
     z0, label = _start(gen, clf)
@@ -67,3 +78,5 @@ def test_ga_rejects_bad_selection_size(toy):
         run_ga(gen, clf, z0, label, GAParams(pop_size=5, best_left=5), seed=0)
     with pytest.raises(ValueError):
         run_ga(gen, clf, z0, label, GAParams(generations=0), seed=0)
+    with pytest.raises(ValueError):
+        run_ga(gen, clf, z0, label, GAParams(batch_size=0), seed=0)
